@@ -1,6 +1,6 @@
 {
   "name": "iframessa",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Communicate between iframes and application",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/cristiantela/iframessa.git"
   },
-  "keywords": [],
+  "keywords": ["Micro frontend", "Communication with iframe", "postMessage"],
   "author": "Matheus Cristian",
   "license": "ISC",
   "bugs": {
