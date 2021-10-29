@@ -27,7 +27,7 @@ iframessa.getterChild('userName', ({ data, sender }) => {
 ```javascript
 const iframessa = require('iframessa');
 
-iframessa.getParent('language').then(({ data, sender }) => {
+iframessa.getParent('userName').then(({ data, sender }) => {
   console.log(data); // Matheus Cristian
   console.log(sender); // parent
 });
