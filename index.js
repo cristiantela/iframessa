@@ -13,13 +13,31 @@ const emitParent = (eventName, data) => {
     return;
   }
 
-  window.parent.postMessage({
-    iframessa: {
-      sender: localId,
-      event: eventName,
-      data,
+  if (window !== window.parent) {
+    window.parent.postMessage({
+      iframessa: {
+        sender: localId,
+        event: eventName,
+        data,
+      }
+    }, '*');
+  }
+}
+
+const emitChild = (destiny, eventName, data) => {
+  for (let i = 0; i < window.frames.length; i++) {
+    const { frameElement } = window.frames[i];
+
+    if (frameElement.getAttribute('iframessa-id') === destiny) {
+      frameElement.contentWindow.postMessage({
+        iframessa: {
+          event: eventName,
+          sender: 'parent',
+          data,
+        },
+      });
     }
-  }, '*');
+  }
 }
 
 if (window !== window.parent) {
@@ -83,13 +101,22 @@ window.addEventListener('message', (event) => {
 
         emitsParent = [];
       }
+    } else if (data.event.startsWith('_getParent_')) {
+      const getName = data.event.replace(/^_getParent_[^_]+_/, '');
+      onEvents.forEach((on) => {
+        if (on.event === `_getter_${getName}`) {
+          const response = on.data({ data: data.data, sender: data.sender, });
+
+          emitChild(data.sender, data.event.replace(/^_getParent_/, '_getParent.response_'), response);
+        }
+      });
     } else {
       onEvents.forEach((on) => {
         if (on.event === data.event) {
           on.data({ data: data.data, sender: data.sender, });
         }
       });
-      console.log(data);
+      // console.log(data);
     }
   }
 });
@@ -111,19 +138,28 @@ module.exports = {
     })
   },
 
-  emitChild: function (destiny, eventName, data) {
-    for (let i = 0; i < window.frames.length; i++) {
-      const { frameElement } = window.frames[i];
+  emitChild,
 
-      if (frameElement.getAttribute('iframessa-id') === destiny) {
-        frameElement.contentWindow.postMessage({
-          iframessa: {
-            event: eventName,
-            sender: 'parent',
-            data,
-          },
-        });
-      }
-    }
+  getParent(name, data) {
+    const eventName = `_getParent_${randomCharacters()}_${name}`;
+
+    emitParent(eventName, data);
+
+    return new Promise((resolve) => {
+      onEvents.push({
+        event: eventName.replace(/^_getParent_/, '_getParent.response_'),
+        data: (response) => {
+          onEvents.splice(onEvents.findIndex((on) => (on.eventName === eventName.replace(/^_getParent_/, '_getParent.response_'))), 1);
+          resolve(response);
+        },
+      });
+    });
+  },
+
+  getterChild(name, get) {
+    onEvents.push({
+      event: `_getter_${name}`,
+      data: get,
+    });
   },
 }
