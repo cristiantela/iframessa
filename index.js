@@ -25,8 +25,10 @@ const emitParent = (eventName, data) => {
 }
 
 const emitChild = (destiny, eventName, data) => {
-  for (let i = 0; i < window.frames.length; i++) {
-    const { frameElement } = window.frames[i];
+  const iframes = document.querySelectorAll('iframe');
+
+  for (let i = 0; i < iframes.length; i++) {
+    const frameElement = iframes[i];
 
     if (frameElement.getAttribute('iframessa-id') === destiny) {
       frameElement.contentWindow.postMessage({
@@ -53,8 +55,9 @@ window.addEventListener('message', (event) => {
     const data = event.data.iframessa;
 
     if (data.event === '_loaded') {
-      for (let i = 0; i < window.frames.length; i++) {
-        const { frameElement } = window.frames[i];
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        const frameElement = iframes[i];
 
         if (String(frameElement.getAttribute('iframessa-status')) !== 'confirmed') {
           const iframeId = generateId();
@@ -80,8 +83,9 @@ window.addEventListener('message', (event) => {
         }
       }, '*');
     } else if (data.event === '_confirmLocalId') {
-      for (let i = 0; i < window.frames.length; i++) {
-        const { frameElement } = window.frames[i];
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        const frameElement = iframes[i];
 
         if (frameElement.getAttribute('iframessa-id') === data.sender) {
           frameElement.setAttribute('iframessa-status', 'confirmed');
@@ -141,7 +145,7 @@ module.exports = {
   emitChild,
 
   getParent(name, data) {
-    const eventName = `_getParent_${randomCharacters()}_${name}`;
+    const eventName = `_getParent_${generateId()}_${name}`;
 
     emitParent(eventName, data);
 
