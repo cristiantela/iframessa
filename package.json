@@ -1,6 +1,6 @@
 {
   "name": "iframessa",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Communicate between iframes and application",
   "main": "index.js",
   "scripts": {

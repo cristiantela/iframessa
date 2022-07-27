@@ -37,7 +37,7 @@ const emitChild = (destiny, eventName, data) => {
           sender: 'parent',
           data,
         },
-      });
+      }, '*');
     }
   }
 }
@@ -70,7 +70,7 @@ window.addEventListener('message', (event) => {
               event: '_setLocalId',
               localId: iframeId,
             },
-          });
+          }, '*');
         }
       }
     } else if (data.event === '_setLocalId') {
@@ -94,7 +94,7 @@ window.addEventListener('message', (event) => {
             iframessa: {
               event: '_canInit',
             },
-          });
+          }, '*');
         }
       }
     } else if (data.event === '_canInit') {
