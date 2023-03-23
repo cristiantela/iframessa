@@ -1,169 +1,121 @@
-const randomCharacters = () => Number(Math.floor(Math.random() * 36 ** 6)).toString(36);
-const generateId = () => `${(new Date()).getTime().toString(36)}:${randomCharacters()}`;
+const randomCharacters = () =>
+  Number(Math.floor(Math.random() * 36 ** 6)).toString(36);
+const generateId = () =>
+  `${new Date().getTime().toString(36)}:${randomCharacters()}`;
 
-let localId = null;
+let localName;
 
-let emitsParent = [];
+const modules = {};
 
 const onEvents = [];
 
-const emitParent = (eventName, data) => {
-  if (!localId) {
-    emitsParent.push({ eventName, data });
-    return;
-  }
-
-  if (window !== window.parent) {
-    window.parent.postMessage({
-      iframessa: {
-        sender: localId,
-        event: eventName,
+function emit(event, data) {
+  window.parent.postMessage(
+    {
+      iframessaData: {
+        sender: localName,
+        event,
         data,
-      }
-    }, '*');
-  }
-}
-
-const emitChild = (destiny, eventName, data) => {
-  const iframes = document.querySelectorAll('iframe');
-
-  for (let i = 0; i < iframes.length; i++) {
-    const frameElement = iframes[i];
-
-    if (frameElement.getAttribute('iframessa-id') === destiny) {
-      frameElement.contentWindow.postMessage({
-        iframessa: {
-          event: eventName,
-          sender: 'parent',
-          data,
-        },
-      }, '*');
-    }
-  }
-}
-
-if (window !== window.parent) {
-  window.parent.postMessage({
-    iframessa: {
-      event: '_loaded',
+      },
     },
-  }, '*');
+    "*"
+  );
 }
 
-window.addEventListener('message', (event) => {
-  if (event && event.data && event.data.iframessa) {
-    const data = event.data.iframessa;
+window.addEventListener("message", (event) => {
+  if (event && event.data && event.data.iframessaSetting) {
+    const setting = event.data.iframessaSetting;
 
-    if (data.event === '_loaded') {
-      const iframes = document.querySelectorAll('iframe');
-      for (let i = 0; i < iframes.length; i++) {
-        const frameElement = iframes[i];
-
-        if (String(frameElement.getAttribute('iframessa-status')) !== 'confirmed') {
-          const iframeId = generateId();
-
-          frameElement.setAttribute('iframessa-id', iframeId);
-          frameElement.setAttribute('iframessa-status', 'waiting');
-
-          frameElement.contentWindow.postMessage({
-            iframessa: {
-              event: '_setLocalId',
-              localId: iframeId,
+    if (setting.event === "register") {
+      modules[setting.sender] = {
+        name: setting.sender,
+        iframe: document.querySelector(`iframe[name=${setting.sender}]`),
+        emit(event, data) {
+          this.iframe.contentWindow.postMessage(
+            {
+              iframessaData: {
+                sender: localName,
+                event,
+                data,
+              },
             },
-          }, '*');
-        }
-      }
-    } else if (data.event === '_setLocalId') {
-      localId = data.localId;
-
-      window.parent.postMessage({
-        iframessa: {
-          event: '_confirmLocalId',
-          sender: localId,
-        }
-      }, '*');
-    } else if (data.event === '_confirmLocalId') {
-      const iframes = document.querySelectorAll('iframe');
-      for (let i = 0; i < iframes.length; i++) {
-        const frameElement = iframes[i];
-
-        if (frameElement.getAttribute('iframessa-id') === data.sender) {
-          frameElement.setAttribute('iframessa-status', 'confirmed');
-
-          frameElement.contentWindow.postMessage({
-            iframessa: {
-              event: '_canInit',
-            },
-          }, '*');
-        }
-      }
-    } else if (data.event === '_canInit') {
-      if (emitsParent.length) {
-        emitsParent.forEach(({ eventName, data }) => {
-          emitParent(eventName, data);
-        });
-
-        emitsParent = [];
-      }
-    } else if (data.event.startsWith('_getParent_')) {
-      const getName = data.event.replace(/^_getParent_[^_]+_/, '');
-      onEvents.forEach((on) => {
-        if (on.event === `_getter_${getName}`) {
-          const response = on.data({ data: data.data, sender: data.sender, });
-
-          emitChild(data.sender, data.event.replace(/^_getParent_/, '_getParent.response_'), response);
-        }
-      });
-    } else {
-      onEvents.forEach((on) => {
-        if (on.event === data.event) {
-          on.data({ data: data.data, sender: data.sender, });
-        }
-      });
-      // console.log(data);
+            "*"
+          );
+        },
+      };
     }
+  } else if (event && event.data && event.data.iframessaData) {
+    const data = event.data.iframessaData;
+
+    onEvents
+      .filter(({ event: ev }) => ev === data.event)
+      .forEach(({ fn }) => {
+        fn({
+          sender: modules[data.sender] || {
+            name: "_parent",
+            emit,
+          },
+          data: data.data,
+        });
+      });
   }
 });
 
 module.exports = {
-  emitParent,
+  register(name) {
+    localName = name;
 
-  onChild: function (eventName, data) {
-    onEvents.push({
-      event: eventName,
-      data,
-    })
-  },
-
-  onParent: function (eventName, data) {
-    onEvents.push({
-      event: eventName,
-      data,
-    })
-  },
-
-  emitChild,
-
-  getParent(name, data) {
-    const eventName = `_getParent_${generateId()}_${name}`;
-
-    emitParent(eventName, data);
-
-    return new Promise((resolve) => {
-      onEvents.push({
-        event: eventName.replace(/^_getParent_/, '_getParent.response_'),
-        data: (response) => {
-          onEvents.splice(onEvents.findIndex((on) => (on.eventName === eventName.replace(/^_getParent_/, '_getParent.response_'))), 1);
-          resolve(response);
+    window.parent.postMessage(
+      {
+        iframessaSetting: {
+          sender: localName,
+          event: "register",
         },
-      });
+      },
+      "*"
+    );
+  },
+
+  emit,
+
+  on(event, fn) {
+    onEvents.push({
+      event,
+      fn,
     });
   },
 
-  getterChild(name, get) {
+  get modules() {
+    return modules;
+  },
+
+  getter(event, fnc) {
     onEvents.push({
-      event: `_getter_${name}`,
-      data: get,
+      event: `getter:${event}`,
+      async fn(data) {
+        const response = await fnc({ ...data, data: data.data.data });
+        data.sender.emit(`get:${event}:${data.data.id}`, response);
+      },
     });
   },
-}
+
+  get(event, fn, data) {
+    const id = generateId();
+
+    emit(`getter:${event}`, {
+      id,
+      data,
+    });
+
+    onEvents.push({
+      event: `get:${event}:${id}`,
+      fn(data) {
+        onEvents.splice(
+          onEvents.indexOf(({ event }) => event === `get:${event}:${id}`),
+          1
+        );
+        fn(data);
+      },
+    });
+  },
+};

@@ -14,10 +14,14 @@ npm install iframessa
 
 #### 1. Create a getter on your parent window
 
+```html
+<iframe src="about.html" name="about"></iframe>
+```
+
 ```javascript
 const iframessa = require('iframessa');
 
-iframessa.getterChild('userName', ({ data, sender }) => {
+iframessa.getter('userName', ({ data, sender }) => {
   return 'Matheus Cristian';
 });
 ```
@@ -27,10 +31,12 @@ iframessa.getterChild('userName', ({ data, sender }) => {
 ```javascript
 const iframessa = require('iframessa');
 
-iframessa.getParent('userName').then(({ data, sender }) => {
+iframessa.register('about');
+
+iframessa.get('userName').then(({ data, sender }) => {
   console.log(data); // Matheus Cristian
-  console.log(sender); // parent
-});
+  console.log(sender); // parent object
+}, data);
 ```
 
 ### Case 2: You would like to emit an event with a data from your child window to your parent
@@ -40,7 +46,7 @@ iframessa.getParent('userName').then(({ data, sender }) => {
 ```javascript
 const iframessa = require('iframessa');
 
-iframessa.emitParent('action', 'logout');
+iframessa.emit('action', 'logout');
 ```
 
 This will emit a `'action'` event to your parent with the data `'logout'`.
@@ -51,9 +57,9 @@ Note that the data can be an object as well.
 ```javascript
 const iframessa = require('iframessa');
 
-iframessa.onChild('action', ({ data, sender }) => {
+iframessa.on('action', ({ data, sender }) => {
   console.log(data); // logout
 });
 ```
 
-You can emit something to a specific child window with `iframessa.emitParent(iframessaId, event, data);`
+You can emit something to a specific child window with `iframessa.modules.about.emit(event, data);`
